@@ -1,7 +1,7 @@
 use std::io;
 fn main() {
 
-    let abe = String::from("abcdefghijklmnopqrstuvwxyz");
+    let abe = String::from("abcdfghijkmopqrstuvwxyz");
     let abe = abe.as_bytes();
 
     println!("De la funcion que desea derivar");
@@ -14,15 +14,26 @@ fn main() {
 
     let mut find = find_var(termino.0, abe);
 
+    let variable_princ = find_x(termino.0, find.0);
+    let mut derivada = String::from("f'(");
+    if variable_princ.0 {
+        derivada.push_str(&termino.0[variable_princ.1..variable_princ.1+1]);
+    } else {
+        derivada.push_str("x");
+    }
+    derivada.push_str(") = ");
+
     let mut index = termino.1;
 
-    let mut derivada = String::from("f'(x) = ");
     if termino.1 == ecuacion.len() {
         let fun_x = find_x(termino.0, find.0);
         let (is_x, in_x) = fun_x;
 
         let fun_pw = find_pw(termino.0);
-        let (is_pw, _in_pw, f_pw, s_pw) = fun_pw;
+        let (is_pw, in_pw, f_pw, s_pw) = fun_pw;
+
+        let fun_div = find_div(termino.0);
+        let (is_div, in_div, _f_div, s_div) = fun_div;
 
         if termino.0 == " " {
             derivada.push_str(" ");
@@ -94,7 +105,114 @@ fn main() {
             }
             derivada.push_str(")");
         }
+        //saber si es kx^-n
+        if is_x && in_x != 0 && is_pw && &s_pw[..1] == "-" && !is_div && in_x == f_pw.len()-1 {
+            derivada.push_str("-");
+            derivada.push_str(&f_pw[..in_x]);
+            derivada.push_str("/(");
+            derivada.push_str(&s_pw[1..]);
+            derivada.push_str(&termino.0[in_x..in_x+1]);
+            let ene = &s_pw[1..];
+            let ene: u32 = ene.trim().parse().expect("type a number");
+            let ene = ene - 1;
+            let ene = ene.to_string();
+            if ene != "1" {
+                derivada.push_str("^");
+                derivada.push_str(&ene);
+            }
+            derivada.push_str(")");
+        }
+        // saber si es x^a/b
+        if is_x && is_pw && is_div && f_pw.len() == 1 && f_pw == "x" && &s_pw[..1] != "-" {
+            let a = &termino.0[in_pw+1..in_div].trim();
+            let a: f32 = a.trim().parse().expect("type a number");
+            let b = &s_div[..].trim();
+            let b: f32 = b.trim().parse().expect("type a number");
+            let pw_up = a - b;
 
+            let b_in = to_index(b.to_string());
+            let a_in = to_index(pw_up.to_string());
+
+            //saber si es x^a/b y a/b == 1/1
+            if a == b {
+                derivada.push_str("1");
+            }
+            if a == 0.0 {
+                derivada.push_str("1");
+            }
+            if b == 0.0 {
+                derivada = String::from("Error, no se puede dividir entre 0.");
+            }
+            //saber si es x^a/b y saber si en y' a/b es menor que 0. == y'=-a/b(^b√x^a)
+            if pw_up / b < 0.0 {
+                derivada.push_str("[-");
+                derivada.push_str(&a.to_string());
+                derivada.push_str("/");
+                derivada.push_str(&b.to_string());
+                derivada.push_str("(");
+                derivada.push_str(&b_in);
+                derivada.push_str("√");
+                derivada.push_str(f_pw);
+                derivada.push_str(&a_in);
+                derivada.push_str(")]");
+            }
+            //saber si es x^a/b y saber si en y' a/b, a es mayor que b == ax^((a/b)-1)/b
+            derivada.push_str("(");
+            derivada.push_str(&a.to_string());
+            derivada.push_str(f_pw);
+            derivada.push_str(&a_in);
+            derivada.push_str("ᐟ");
+            derivada.push_str(&b_in);
+            derivada.push_str("/");
+            derivada.push_str(&b.to_string());
+            derivada.push_str(")");
+        }
+
+        // saber si es cx^a/b
+        if is_x && is_pw && is_div && f_pw.len() > 1 && f_pw != "x" && &s_pw[..1] != "-" {
+            let a = &termino.0[in_pw+1..in_div].trim();
+            let a: f32 = a.trim().parse().expect("type a number");
+            let b = &s_div[..].trim();
+            let b: f32 = b.trim().parse().expect("type a number");
+            let pw_up = a - b;
+
+            let b_in = to_index(b.to_string());
+            let a_in = to_index(pw_up.to_string());
+
+            //saber si es x^a/b y a/b == 1/1
+            if a == b {
+                derivada.push_str("1");
+            }
+            if a == 0.0 {
+                derivada.push_str("1");
+            }
+            if b == 0.0 {
+                derivada = String::from("Error, no se puede dividir entre 0.");
+            }
+            //saber si es x^a/b y saber si en y' a/b es menor que 0. == y'=-a/b(^b√x^a)
+            if pw_up / b < 0.0 {
+                derivada.push_str("[-");
+                derivada.push_str(&a.to_string());
+                derivada.push_str("/");
+                derivada.push_str(&b.to_string());
+                derivada.push_str("(");
+                derivada.push_str(&b_in);
+                derivada.push_str("√");
+                derivada.push_str(f_pw);
+                derivada.push_str(&a_in);
+                derivada.push_str(")]");
+            }
+            //saber si es x^a/b y saber si en y' a/b, a es mayor que b == ax^((a/b)-1)/b
+            derivada.push_str("(");
+            derivada.push_str(&a.to_string());
+            derivada.push_str(f_pw);
+            derivada.push_str(&a_in);
+            derivada.push_str("ᐟ");
+            derivada.push_str(&b_in);
+            derivada.push_str("/");
+            derivada.push_str(&b.to_string());
+            derivada.push_str(")");
+        }
 
     }
 
@@ -246,16 +364,26 @@ fn main() {
             let b = &s_div[..].trim();
             let b: f32 = b.trim().parse().expect("type a number");
             let pw_up = a - b;
+
+            let b_in = to_index(b.to_string());
+            let a_in = to_index(pw_up.to_string());
+
             //saber si es x^a/b y a/b == 1/1
             if a == b {
                 derivada.push_str("1");
                 continue;
             }
+            if a == 0.0 {
+                derivada.push_str("1");
+                continue;
+            }
+            if b == 0.0 {
+                derivada = String::from("Error, no se puede dividir entre 0.");
+                break;
+            }
             //saber si es x^a/b y saber si en y' a/b es menor que 0. == y'=-a/b(^b√x^a)
             if pw_up / b < 0.0 {
-                let a_in = to_index(a.to_string());
-                let b_in = to_index(b.to_string());
-                derivada.push_str("-");
+                derivada.push_str("[-");
                 derivada.push_str(&a.to_string());
                 derivada.push_str("/");
                 derivada.push_str(&b.to_string());
@@ -264,12 +392,72 @@ fn main() {
                 derivada.push_str("√");
                 derivada.push_str(f_pw);
                 derivada.push_str(&a_in);
-                derivada.push_str(")");
+                derivada.push_str(")]");
                 continue;
             }
-
+            //saber si es x^a/b y saber si en y' a/b, a es mayor que b == ax^((a/b)-1)/b
+            derivada.push_str("(");
+            derivada.push_str(&a.to_string());
+            derivada.push_str(f_pw);
+            derivada.push_str(&a_in);
+            derivada.push_str("ᐟ");
+            derivada.push_str(&b_in);
+            derivada.push_str("/");
+            derivada.push_str(&b.to_string());
+            derivada.push_str(")");
+            continue;
         }
 
+        // saber si es cx^a/b
+        if is_x && is_pw && is_div && f_pw.len() > 1 && f_pw != "x" && &s_pw[..1] != "-" {
+            let a = &termino.0[in_pw+1..in_div].trim();
+            let a: f32 = a.trim().parse().expect("type a number");
+            let b = &s_div[..].trim();
+            let b: f32 = b.trim().parse().expect("type a number");
+            let pw_up = a - b;
+
+            let b_in = to_index(b.to_string());
+            let a_in = to_index(pw_up.to_string());
+
+            //saber si es x^a/b y a/b == 1/1
+            if a == b {
+                derivada.push_str("1");
+                continue;
+            }
+            if a == 0.0 {
+                derivada.push_str("1");
+                continue;
+            }
+            if b == 0.0 {
+                derivada = String::from("Error, no se puede dividir entre 0.");
+                break;
+            }
+            //saber si es x^a/b y saber si en y' a/b es menor que 0. == y'=-a/b(^b√x^a)
+            if pw_up / b < 0.0 {
+                derivada.push_str("[-");
+                derivada.push_str(&a.to_string());
+                derivada.push_str("/");
+                derivada.push_str(&b.to_string());
+                derivada.push_str("(");
+                derivada.push_str(&b_in);
+                derivada.push_str("√");
+                derivada.push_str(f_pw);
+                derivada.push_str(&a_in);
+                derivada.push_str(")]");
+                continue;
+            }
+            //saber si es x^a/b y saber si en y' a/b, a es mayor que b == ax^((a/b)-1)/b
+            derivada.push_str("(");
+            derivada.push_str(&a.to_string());
+            derivada.push_str(f_pw);
+            derivada.push_str(&a_in);
+            derivada.push_str("ᐟ");
+            derivada.push_str(&b_in);
+            derivada.push_str("/");
+            derivada.push_str(&b.to_string());
+            derivada.push_str(")");
+            continue;
+        }
     }
     println!("{}", derivada);
 }
@@ -372,6 +560,9 @@ fn to_index (numero: String) -> String {
         }
         if item == b'0' {
             fin.push_str("⁰");
+        }
+        if item == b'-' {
+            fin.push_str("⁻");
         }
     }
     return fin
